@@ -56,6 +56,9 @@
 #define PID_TAU 0.06f
 #define REF_ANGLE 0.0f
 
+#define OVER_ANGLE_PROTECTION 30.0f // deg
+#define UNDER_ANGLE_PROTECTION (-80.0f) // deg
+
 //#define PHIL_S_LAB
 //#define REVERSE_SPIN_DIRECTION
 
@@ -272,12 +275,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
+// Control loop
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM15)
 	{
 		bno_vector = bno055_getVectorEuler();
 		copter_angle = -bno_vector.y;
+
+		// Under/Over angle protection
+		if ((copter_angle < UNDER_ANGLE_PROTECTION)
+				|| (copter_angle > OVER_ANGLE_PROTECTION))
+		{
+			emergency_stop_flag = 1;
+		}
 
 #ifdef PHIL_S_LAB
 		speed_ref = (uint16_t) PID_Controller_Phil_s_Lab(&pid, REF_ANGLE,
